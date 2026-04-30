@@ -2,7 +2,7 @@
 
 This repository contains a collection of projects focused on implementing machine learning foundations, stochastic modeling, and custom optimization algorithms from scratch. Each project emphasizes the mathematical theory behind data science and its practical application using **R**.
 
-## 🚀 Featured Projects
+## Featured Projects
 
 ### 1. Robust Regression via Custom Gradient Descent
 
