@@ -61,7 +61,7 @@ Analyzed model complexity to ensure generalization on unseen datasets.
 
 ----------
 
-## 🛠️ Tools & Technologies
+## Tools & Technologies
 
 -   **Language:** R
     
@@ -70,6 +70,6 @@ Analyzed model complexity to ensure generalization on unseen datasets.
 -   **Key Concepts:** Gradient Descent, Monte Carlo Simulation, Markov Chains, Bias-Variance Trade-off.
     
 
-## 📈 How to Use
+## How to Use
 
-Each folder contains the `.R` or `.Rmd` source code and a rendered `PDF/HTML` report showing the final analysis and visualizations.
+Each folder contains the `.Rmd` source code and a rendered PDF report showing the final analysis and visualizations.
