@@ -1,0 +1,182 @@
+---
+title: "Discrete Optimization, Conway's Game of Life"
+output:
+  pdf_document:
+    number_sections: no
+urlcolor: blue
+---
+
+Conway's Game of Life (CGoL) is a simple, but popular example of cellular automata. It is played on a rectangular grid where each square on the grid is either 'alive' (filled in colour in the image on the next page), or 'dead' (unfilled). From one discrete time step to the next, squares can either die, come alive, or stay dead or alive. For a square to remain alive, it needs to have either exactly 2 or 3 alive neighbours (diagonals count as neighbours). For a dead square to become alive, it must have exactly 3 alive neighbours.
+
+To mess around with it yourself, see https://playgameoflife.com/
+
+To play it in R, we need two functions: `conway_step` moves a grid forward using CGoL rules, and `plot_conway` plots a board at any given step.
+
+
+
+```{r}
+conway_step = function(input)
+{
+  Nrow = nrow(input)
+  Ncol = ncol(input)
+  inboard = matrix(data=0, nrow=Nrow+2, ncol=Ncol+2, byrow=TRUE)
+
+  inboard[2:(Nrow+1), 2:(Ncol+1)] = input  
+
+  outboard = matrix(data=0, nrow=Nrow, ncol=Ncol, byrow=TRUE)
+  for(j in 1:Nrow)
+  {
+    for(k in 1:Ncol)
+    {
+      neibs = sum(inboard[j:(j+2) , k:(k+2)])
+      neibs = neibs - inboard[j+1,k+1]
+      
+      if(inboard[j+1,k+1] == 1 & neibs %in% c(2,3))
+      {
+        outboard[j,k] = 1
+      }
+      if(inboard[j+1,k+1] == 0 & neibs %in% c(3))
+      {
+        outboard[j,k] = 1
+      }
+    }
+  }
+  
+  return(outboard)
+}
+
+```
+
+
+\newpage
+
+
+```{r}
+plot_conway = function(board)
+{
+  Nrow = nrow(board)
+  Ncol = ncol(board)
+  board = board[Nrow:1, ]
+  
+  plot.new()
+  plot.window(xlim=c(1,Ncol+1) ,ylim=c(1,Nrow+1))
+  abline(h=0:Nrow)
+  abline(v=0:Ncol)
+  
+  for(x in 1:Nrow)
+  {
+    for(y in 1:Ncol)
+    {
+      if(board[x,y] == 1)
+      {
+        polygon(x=x+c(0,1,1,0), y=y+c(0,0,1,1), col="black", lwd=3)
+      }
+    }
+  }
+}
+```
+
+
+Let's see this in action.
+
+```{r, fig.width=8, fig.height=4}
+
+input = matrix(nrow=5, ncol=5, byrow=TRUE,
+          data=c(1,0,0,0,1,
+                 0,1,0,1,0,
+                 0,0,1,0,0,
+                 0,1,0,1,0,
+                 1,0,0,0,1))
+
+
+output = conway_step(input)
+
+par(mfrow = c(1,2))
+
+plot_conway(input)
+plot_conway(output)
+
+par(mfrow = c(1,1))
+
+```
+
+
+Your goal is to find a starting state on a 5x5 grid that leaves as many squares alive as possible after one step. While you could manually find such a solution, another way is to use a discrete optimizer. Instead of moving on a continuous space like gradient descent or Newton-Raphson does, you would move along a 25-dimensional cube of binary values instead.
+
+You'll do this with simulated annealing, here's how it'll work:
+
+1. Take an arbitrary starting state (e.g., the `input` given above).
+
+2. Loop steps 3-7 1000 times.
+
+3. Set the `input` to the best known solution so far.
+
+4. Randomly change `x` cells in `input` from alive to dead, or dead to alive. For the first 200 loops, this `x=5`, for the next 200 loops `x=4` and so on.
+
+5. Apply `conway_step` to apply the CGoL rules for one step.
+
+6. Take the `sum` of the output to see how many cells are alive after one step.
+
+7. If `sum` is larger than the sum of the best solution so far, save the current input as the best solution.
+
+
+
+a) (7 marks) Program the above algorithm into the code template below.
+
+b) (1 mark) Plot your solution and the result after one step using `plot_conway`.
+
+Code template:
+
+```{r}
+## Step 1: Take an arbitrary starting state
+bestinputrn = matrix(data=c(1,0,0,0,1,
+                 0,1,0,1,0,
+                 0,0,1,0,0,
+                 0,1,0,1,0,
+                 1,0,0,0,1), nrow=5, ncol=5, byrow = TRUE)
+bestAlive = 0
+
+## Step 2. Loop steps 3-7 1000 times.
+for(count in 1:1000)
+{
+  
+
+## Step 3. Set the `input` to the best known solution so far.
+input = bestinputrn
+
+## Step 4. Randomly change `x` cells in `input` from alive to dead, or dead to alive. 
+## For the first 200 loops, this `x=5`, for the next 200 loops `x=4` and so on.
+heat = 6 - ceiling(count/200) # heat is x.
+aa = sample(1:5, size=heat, replace=FALSE)
+bb = sample(1:5, size=heat, replace=FALSE)
+for (i in 1:heat){
+  a = aa[i]
+  b = bb[i]
+  input[a,b] = 1 - input[a,b]
+} 
+  
+## Step 5. Apply `conway_step` to apply the CGoL rules for one step.
+output = conway_step(input)
+
+## Step 6. Take the `sum` of the output to see how many cells are alive after one step.
+Nalive = sum(output)
+
+## Step 7. If `sum` is larger than the sum of the best solution so far, save the 
+## current input as the best solution.
+if(bestAlive < Nalive)
+{
+  bestinputrn = input
+  bestAlive = Nalive
+}
+
+}
+
+
+par(mfrow = c(1,2))
+
+plot_conway(bestinputrn)
+plot_conway(conway_step(bestinputrn))
+
+par(mfrow = c(1,1))
+
+```
