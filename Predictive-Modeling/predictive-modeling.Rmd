@@ -1,0 +1,126 @@
+---
+title: "Predictive Modeling with Markov Chains"
+output:
+  pdf_document:
+    number_sections: no
+urlcolor: blue
+---
+
+
+The following code builds a fictional transition matrix of the scores between two tennis players: Federer and Nadal.
+
+
+
+```{r}
+set.seed(341)
+statelist = c("0-0", "0-15", "0-30", "0-40",
+              "15-0", "15-15", "15-30", "15-40", 
+              "30-0", "30-15", "30-30", "30-40",
+              "40-0", "40-15", "40-30", "40-40",
+              "Adv-40", "40-Adv", "Federer Wins", "Nadal Wins")
+
+mat = matrix(0, nrow=length(statelist), 
+             ncol=length(statelist))
+
+
+row.names(mat) = statelist
+colnames(mat) = statelist
+
+fromstate = rep(1:20, each=2)
+tostate = fromstate[1:24] + rep(c(1,4), times=12)
+tostate[c(7,15,23,31)] = 20
+tostate[25:32] = c(19,14,19,15,19,16,17,18)
+
+tostate[33:36] = c(19,16,16,20)
+tostate[37:40] = c(19,19,20,20)
+
+means = rep(c(0.45,0.55), times=20)
+probs = round(rnorm(40, mean=means, sd=0.02), 2)
+probs[2*(1:18)] = 1 - probs[2*(1:18) - 1]
+probs[37:40] = 1
+
+for(k in 1:length(fromstate))
+{
+  mat[fromstate[k], tostate[k]] = probs[k]
+}
+
+mat[1:5, 1:5]
+A = mat
+df_tennis = data.frame(mat)
+```
+
+
+In the first row, the 0-0 row, we see 0.43 in the 0-15 column, and 0.57 in the 15-0 column, which means that from a game state of 0-0 (the beginning of a game), there is a 43% chance for Nadal to score and make it 0-15, and 57% chance for Federer to score and make it 15-0. Every row except the last two rows are all zeros except for two columns, which represent the probability of moving from the row state to the column state. The last two rows are 'sinks' in that once you are in the "Federer Wins" state, or the "Nadal Wins" state, you can never leave those states.
+
+
+
+a) (1 mark) Use the following matrix multiplication code to get $A^2$. This is the transition matrix after two points are scored. Use it to find the probability that the game will be 15-15 after two scores, starting from 0-0.
+
+```{r}
+Asq = A %*% A
+Asq[1,6]
+```
+
+
+
+b) (1 mark) Use matrix multiplication to find the probability that the game will be at 40-40 after 4 scores, starting at 40-40. Hint: 40-40 is state 16.
+```{r}
+library(expm)
+
+Ab=A %^% 4
+Ab[16, 16]
+```
+
+c) (2 marks) Use matrix multiplication and a for loop to find the probability that Federer will have won the game after 50 scores (or fewer), starting from 0-0. Note: 'Federer wins' is state 19
+```{r}
+fd_w_p = c()
+gg_i = c()
+ggdist =c(0)
+
+for (i in 1:50){
+  AA = A %^% i
+  fd_w_p = c(fd_w_p, AA[1, 19]) 
+  #list of federer win p after i scores
+  gg_i = c(gg_i, AA[1, 19]+AA[1, 20]) 
+  #list of p that game ends after EXACTLY i scores
+  ggdist = c(ggdist, gg_i[i]-gg_i[i-1]) 
+  #list of p that game go on until i scores, or game rounds dist.
+}
+
+sum(fd_w_p * na.omit(ggdist))
+```
+Hence, 0.333947 is the probability that Federer will have won the game after 50 scores (or fewer), starting from 0-0.
+
+d) (2 marks) Build a `data.frame` of the chance that Federer wins conditional on each of the 20 starting states. Name the columns of the data frame "Start" and "WinProb".
+```{r}
+WinProb = rep(0, 20)
+Start = statelist
+
+fwp_xstart = function(Startstate, 
+                      games=500)
+{
+  x = Startstate
+ fd_w_p = c()
+ gg_i = c()
+ ggdist =c(0)
+
+ for (i in 1:games){
+  AA = A %^% i
+  fd_w_p = c(fd_w_p, AA[x, 19]) 
+  #list of federer win p after i scores
+  gg_i = c(gg_i, AA[x, 19]+AA[x, 20]) 
+  #list of p that game ends after EXACTLY i scores
+  ggdist = c(ggdist, gg_i[i]-gg_i[i-1]) 
+  #list of p that game go on until i scores, or game rounds dist.
+}
+
+  return(sum(fd_w_p * na.omit(ggdist)))
+}
+
+for (i in 1:20){
+  WinProb[i] = fwp_xstart(i)
+}
+
+df = data.frame(Start, WinProb)
+df
+```
